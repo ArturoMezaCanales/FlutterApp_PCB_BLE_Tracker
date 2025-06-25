@@ -4,6 +4,8 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 import 'bluetooth.dart';
 import 'HomePage.dart';
+import 'map.dart';
+
 void main() {
   runApp(const MyApp());
 }
@@ -182,11 +184,23 @@ Future<void> _getCurrentLocation() async {
                       MaterialPageRoute(builder: (context) => const TheHomePage ()),
                   );
                   },
-                  child: const Text('trial'),
+                  child: const Text('testScreen'),
 
 
                 ),
-                
+
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context, 
+                      MaterialPageRoute(builder: (context) => const MyMap ()),
+                  );
+                  },
+                  child: const Text('map'),
+
+
+                ),
+
                 ElevatedButton(
                   onPressed: _getCurrentLocation,
                   child: const Text('Get Current Location'),
