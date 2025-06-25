@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
+import 'bluetooth.dart';
+import 'HomePage.dart';
 void main() {
   runApp(const MyApp());
 }
@@ -160,6 +163,30 @@ Future<void> _getCurrentLocation() async {
                           const SizedBox(height: 20),
                 Text(_locationMessage),
                 const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: () {
+                   Navigator.push(
+                     context,
+                  MaterialPageRoute(builder: (context) => const ScanScreen ()),
+                );
+                },
+                child: const Text('Go to Second Screen'),
+                
+                ),
+                
+                
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context, 
+                      MaterialPageRoute(builder: (context) => const TheHomePage ()),
+                  );
+                  },
+                  child: const Text('trial'),
+
+
+                ),
+                
                 ElevatedButton(
                   onPressed: _getCurrentLocation,
                   child: const Text('Get Current Location'),
