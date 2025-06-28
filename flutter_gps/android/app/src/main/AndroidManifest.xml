@@ -12,6 +12,13 @@
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
     
+    <!-- Background service permissions -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    
     <!-- Required for BLE -->
     <uses-feature
         android:name="android.hardware.bluetooth_le"
@@ -23,6 +30,12 @@
         android:icon="@mipmap/ic_launcher">
 
         <uses-library android:name="org.apache.http.legacy" android:required="false"/>
+
+        <!-- Background service for BLE connection -->
+        <service
+            android:name="id.flutter.flutter_background_service.BackgroundService"
+            android:exported="true"
+            android:foregroundServiceType="dataSync" />
 
         <activity
             android:name=".MainActivity"
