@@ -6,6 +6,7 @@ A Flutter application designed to connect to and track data from an ESP32-S3-Zer
 
 - **BLE Device Discovery**: Automatically scans for and connects to your ESP32-S3-Zero device
 - **Real-time Data Reception**: Receives GPS coordinates, timestamp, altitude, and RSSI data
+- **Location Data Transmission**: Automatically sends phone's GPS location to ESP32 every 2 seconds
 - **Data Parsing**: Automatically parses the incoming data format: `MM/DD/YYYY, HH:MM:SS, Latitude, Longitude, Altitude, RSSI`
 - **Connection Management**: Handles connection/disconnection with visual feedback
 - **Data History**: Keeps track of received data with a history viewer
@@ -16,8 +17,10 @@ A Flutter application designed to connect to and track data from an ESP32-S3-Zer
 Your ESP32-S3-Zero device should:
 - Advertise with name: `ESP32-S3-Zero`
 - Use Service UUID: `4fafc201-1fb5-459e-8fcc-c5c9c331914b`
-- Use Characteristic UUID: `beb5483e-36e1-4688-b7f5-ea07361b26a8`
+- Use Data Characteristic UUID: `beb5483e-36e1-4688-b7f5-ea07361b26a8` (for sending data to phone)
+- Use Receive Characteristic UUID: `beb5483e-36e1-4688-b7f5-ea07361b26a9` (for receiving data from phone)
 - Send data in format: `MM/DD/YYYY, HH:MM:SS, Latitude, Longitude, Altitude, RSSI`
+- Receive data in format: `MM/DD/YYYY, HH:MM:SS, Latitude, Longitude, Altitude`
 - Transmit data at 1Hz (1 second intervals)
 
 ## State Machine Integration
@@ -80,12 +83,15 @@ The app automatically requests these permissions:
 5. Tap "Scan for ESP32-S3-Zero" button
 6. The app will automatically connect when the device is found
 
-### Step 3: Monitor Data
+### Step 3: Monitor Data & Location Sharing
 1. Once connected, you'll see:
    - Connection status (green background when connected)
+   - "Sending location every 2s" indicator showing the app is sharing your location
    - Packet counter showing received data count
    - Latest GPS data in formatted display
    - Raw data log for troubleshooting
+2. The app automatically sends your phone's GPS location to the ESP32 every 2 seconds
+3. The ESP32 will use your phone's location data and timestamp in its transmissions
 
 ### Step 4: View Data History
 1. Tap the "History" button to view all received data entries
@@ -94,12 +100,22 @@ The app automatically requests these permissions:
 
 ## Data Format
 
-The ESP32 sends data in this format:
+### Data Received from ESP32:
 ```
 MM/DD/YYYY, HH:MM:SS, Latitude, Longitude, Altitude, RSSI
 ```
 
-Example:
+### Data Sent to ESP32:
+```
+MM/DD/YYYY, HH:MM:SS, Latitude, Longitude, Altitude
+```
+
+Example of data sent to ESP32:
+```
+12/28/2025, 14:30:25, 40.712800, -74.006000, 10.00
+```
+
+Example of data received from ESP32:
 ```
 12/28/2025, 14:30:25, 40.712800, -74.006000, 10.00, -45
 ```
@@ -115,12 +131,19 @@ Example:
 ### Connection Issues
 - ESP32 will automatically go to LOST mode (red LED) if connection fails
 - The app will attempt to reconnect automatically
+- Location sharing will stop automatically when disconnected
 - Use the Disconnect button and try reconnecting
 
 ### No Data Received
 - Check that the ESP32 is in NORMAL mode (purple LED)
 - Verify the ESP32 code is sending notifications
-- Check the characteristic UUID matches exactly
+- Check the characteristic UUIDs match exactly
+
+### Location Data Not Updating ESP32
+- Ensure location permissions are granted to the app
+- Check that "Sending location every 2s" indicator is visible
+- Verify the ESP32 receive characteristic is properly configured
+- Check ESP32 serial output for received data logs
 
 ### Permission Denied
 - Go to Android Settings > Apps > [Your App] > Permissions
@@ -130,9 +153,12 @@ Example:
 
 ### BLE Connection Parameters
 - **Service UUID**: `4fafc201-1fb5-459e-8fcc-c5c9c331914b`
-- **Characteristic UUID**: `beb5483e-36e1-4688-b7f5-ea07361b26a8`
+- **Data Characteristic UUID**: `beb5483e-36e1-4688-b7f5-ea07361b26a8` (ESP32 → Phone)
+- **Receive Characteristic UUID**: `beb5483e-36e1-4688-b7f5-ea07361b26a9` (Phone → ESP32)
 - **Connection Type**: GATT Client (app) to GATT Server (ESP32)
-- **Data Method**: Characteristic Notifications
+- **Data Method**: Characteristic Notifications (receive) and Write (send)
+- **Send Interval**: Every 2 seconds (phone to ESP32)
+- **Receive Interval**: Every 1 second (ESP32 to phone)
 - **Scan Timeout**: 10 seconds
 - **Connection Timeout**: 15 seconds
 

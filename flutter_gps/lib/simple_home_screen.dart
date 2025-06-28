@@ -6,7 +6,6 @@ import 'simple_map_widget.dart';
 import 'background_service_screen.dart';
 import 'esp32_data_parser.dart';
 import 'dart:async';
-import 'dart:io' show Platform;
 
 class SimpleHomeScreen extends StatefulWidget {
   final BluetoothDevice? connectedDevice;
@@ -24,13 +23,16 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
   String _signalStrength = '--';
   String _lastUpdate = 'Never';
   BluetoothCharacteristic? _dataCharacteristic;
+  BluetoothCharacteristic? _sendCharacteristic;  // For sending data to ESP32
   StreamSubscription? _dataSubscription;
   StreamSubscription? _connectionSubscription;
   Timer? _locationTimer;
+  Timer? _sendDataTimer;  // Timer for sending data every 2 seconds
 
   // ESP32 specific UUIDs
   static const String SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
-  static const String CHARACTERISTIC_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a8";
+  static const String CHARACTERISTIC_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a8";  // For receiving data from ESP32
+  static const String RECEIVE_CHAR_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a9";    // For sending data to ESP32
 
   @override
   void initState() {
@@ -50,6 +52,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
     _dataSubscription?.cancel();
     _connectionSubscription?.cancel();
     _locationTimer?.cancel();
+    _sendDataTimer?.cancel();  // Cancel the send data timer
     super.dispose();
   }
 
@@ -146,6 +149,11 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
             ? 'Connected' 
             : 'Disconnected';
         });
+        
+        // Stop sending data if disconnected
+        if (state != BluetoothConnectionState.connected) {
+          _stopSendingLocationData();
+        }
       });
 
       // Discover services
@@ -154,6 +162,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
       for (BluetoothService service in services) {
         if (service.uuid.toString().toLowerCase() == SERVICE_UUID.toLowerCase()) {
           for (BluetoothCharacteristic characteristic in service.characteristics) {
+            // Data characteristic for receiving data from ESP32
             if (characteristic.uuid.toString().toLowerCase() == CHARACTERISTIC_UUID.toLowerCase()) {
               _dataCharacteristic = characteristic;
               
@@ -161,13 +170,28 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
               await characteristic.setNotifyValue(true);
               _dataSubscription = characteristic.lastValueStream.listen(_processReceivedData);
               
-              setState(() {
-                _connectionStatus = 'Connected';
-              });
-              break;
+              print('Data characteristic set up successfully');
+            }
+            // Send characteristic for sending data to ESP32
+            else if (characteristic.uuid.toString().toLowerCase() == RECEIVE_CHAR_UUID.toLowerCase()) {
+              _sendCharacteristic = characteristic;
+              print('Send characteristic found');
             }
           }
         }
+      }
+      
+      // Start sending location data every 2 seconds if we found the send characteristic
+      if (_sendCharacteristic != null) {
+        _startSendingLocationData();
+        setState(() {
+          _connectionStatus = 'Connected';
+        });
+      } else {
+        print('Warning: Send characteristic not found');
+        setState(() {
+          _connectionStatus = 'Connected (Read Only)';
+        });
       }
     } catch (e) {
       setState(() {
@@ -251,6 +275,48 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
         });
       }
     });
+  }
+
+  void _startSendingLocationData() {
+    // Cancel any existing timer
+    _sendDataTimer?.cancel();
+    
+    // Start sending location data every 2 seconds
+    _sendDataTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
+      _sendLocationToESP32();
+    });
+    
+    print('Started sending location data to ESP32 every 2 seconds');
+  }
+
+  void _stopSendingLocationData() {
+    _sendDataTimer?.cancel();
+    _sendDataTimer = null;
+    print('Stopped sending location data to ESP32');
+  }
+
+  Future<void> _sendLocationToESP32() async {
+    if (_sendCharacteristic == null || _phoneLocation == null) {
+      return;
+    }
+
+    try {
+      // Format the data according to ESP32 expected format:
+      // MM/DD/YYYY, HH:MM:SS, Latitude, Longitude, Altitude
+      DateTime now = DateTime.now();
+      String formattedDate = '${now.month.toString().padLeft(2, '0')}/${now.day.toString().padLeft(2, '0')}/${now.year}';
+      String formattedTime = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}';
+      
+      String dataPacket = '$formattedDate, $formattedTime, ${_phoneLocation!.latitude.toStringAsFixed(6)}, ${_phoneLocation!.longitude.toStringAsFixed(6)}, ${_phoneLocation!.altitude.toStringAsFixed(2)}';
+      
+      // Send the data to ESP32
+      await _sendCharacteristic!.write(dataPacket.codeUnits, withoutResponse: false);
+      
+      print('Sent location to ESP32: $dataPacket');
+      
+    } catch (e) {
+      print('Error sending location to ESP32: $e');
+    }
   }
 
   @override
@@ -342,7 +408,42 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                     Text('Signal: $_signalStrength'),
                     const Spacer(),
                     Text('Last: $_lastUpdate'),
-                    const SizedBox(width: 16),
+                  ],
+                ),
+                
+                const SizedBox(height: 4),
+                
+                // Sending status and debug button row
+                Row(
+                  children: [
+                    if (_sendDataTimer?.isActive == true) ...[
+                      const Icon(Icons.upload, size: 16, color: Colors.green),
+                      const SizedBox(width: 4),
+                      const Text(
+                        'Sending location every 2s',
+                        style: TextStyle(color: Colors.green, fontSize: 12),
+                      ),
+                    ] else if (widget.connectedDevice != null) ...[
+                      const Icon(Icons.warning, size: 16, color: Colors.orange),
+                      const SizedBox(width: 4),
+                      const Text(
+                        'Not sending location',
+                        style: TextStyle(color: Colors.orange, fontSize: 12),
+                      ),
+                    ],
+                    const Spacer(),
+                    if (widget.connectedDevice != null && _sendCharacteristic != null) ...[
+                      ElevatedButton.icon(
+                        onPressed: _sendLocationToESP32,
+                        icon: const Icon(Icons.send, size: 16),
+                        label: const Text('Send Now'),
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                          textStyle: const TextStyle(fontSize: 10),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
                     ElevatedButton.icon(
                       onPressed: _openDebugScreen,
                       icon: const Icon(Icons.bug_report, size: 16),
