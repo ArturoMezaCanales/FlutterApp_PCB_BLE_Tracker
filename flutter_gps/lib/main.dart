@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 import 'bluetooth.dart';
 import 'HomePage.dart';
@@ -172,7 +171,7 @@ Future<void> _getCurrentLocation() async {
                   MaterialPageRoute(builder: (context) => const ScanScreen ()),
                 );
                 },
-                child: const Text('Go to Second Screen'),
+                child: const Text('Connect to ESP32-S3-Zero'),
                 
                 ),
                 
