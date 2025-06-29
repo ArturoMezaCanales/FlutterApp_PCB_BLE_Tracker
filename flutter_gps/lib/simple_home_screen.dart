@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:flutter_compass/flutter_compass.dart';
 import 'simple_map_widget.dart';
 import 'background_service_screen.dart';
 import 'esp32_data_parser.dart';
@@ -28,6 +29,11 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
   StreamSubscription? _connectionSubscription;
   Timer? _locationTimer;
   Timer? _sendDataTimer;  // Timer for sending data every 2 seconds
+  
+  // Compass related variables
+  StreamSubscription? _compassSubscription;
+  double _heading = 0.0;  // Device heading in degrees (0-360)
+  bool _compassAvailable = true;
 
   // ESP32 specific UUIDs
   static const String SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
@@ -38,6 +44,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
   void initState() {
     super.initState();
     _initializeLocation();
+    _initializeCompass();
     if (widget.connectedDevice != null) {
       _setupBLEConnection();
     } else {
@@ -53,6 +60,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
     _connectionSubscription?.cancel();
     _locationTimer?.cancel();
     _sendDataTimer?.cancel();  // Cancel the send data timer
+    _compassSubscription?.cancel();  // Cancel compass subscription
     super.dispose();
   }
 
@@ -319,6 +327,54 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
     }
   }
 
+  Future<void> _initializeCompass() async {
+    try {
+      // Check if we're on web - compass might not be available
+      if (kIsWeb) {
+        setState(() {
+          _compassAvailable = false;
+        });
+        print('Compass not available on web platform');
+        return;
+      }
+      
+      // Subscribe to compass events
+      _compassSubscription = FlutterCompass.events?.listen(
+        (CompassEvent event) {
+          if (event.heading != null) {
+            setState(() {
+              _heading = event.heading!;
+            });
+          }
+        },
+        onError: (error) {
+          print('Compass error: $error');
+          setState(() {
+            _compassAvailable = false;
+          });
+        },
+      );
+      
+      print('Compass initialized successfully');
+    } catch (e) {
+      print('Error initializing compass: $e');
+      setState(() {
+        _compassAvailable = false;
+      });
+    }
+  }
+
+  String _getCompassDirection(double heading) {
+    // Convert heading to compass direction
+    const List<String> directions = [
+      'N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE',
+      'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'
+    ];
+    
+    int index = ((heading + 11.25) / 22.5).floor() % 16;
+    return directions[index];
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -333,6 +389,7 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
             flex: 3,
             child: SimpleMapWidget(
               phoneLocation: _phoneLocation,
+              phoneHeading: _compassAvailable ? _heading : null,
               espLocation: _espData != null 
                 ? Position(
                     latitude: _espData!.latitude,
@@ -412,6 +469,40 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
                 ),
                 
                 const SizedBox(height: 4),
+                
+                // Compass and magnetometer info row
+                if (_compassAvailable) ...[
+                  Row(
+                    children: [
+                      const Icon(Icons.explore, size: 16, color: Colors.green),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Compass: ${_heading.toStringAsFixed(0)}°',
+                        style: const TextStyle(color: Colors.green, fontSize: 12),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        _getCompassDirection(_heading),
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                      ),
+                      const Spacer(),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                ] else ...[
+                  Row(
+                    children: [
+                      const Icon(Icons.explore_off, size: 16, color: Colors.orange),
+                      const SizedBox(width: 4),
+                      const Text(
+                        'Compass: Not Available',
+                        style: TextStyle(color: Colors.orange, fontSize: 12),
+                      ),
+                      const Spacer(),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                ],
                 
                 // Sending status and debug button row
                 Row(

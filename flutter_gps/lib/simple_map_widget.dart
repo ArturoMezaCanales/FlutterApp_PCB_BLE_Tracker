@@ -6,11 +6,13 @@ import 'package:latlong2/latlong.dart';
 class SimpleMapWidget extends StatefulWidget {
   final Position? phoneLocation;
   final Position? espLocation;
+  final double? phoneHeading;  // Heading in degrees (0-360)
 
   const SimpleMapWidget({
     super.key,
     this.phoneLocation,
     this.espLocation,
+    this.phoneHeading,
   });
 
   @override
@@ -104,13 +106,22 @@ class _SimpleMapWidgetState extends State<SimpleMapWidget> {
       markers.add(
         Marker(
           point: LatLng(widget.phoneLocation!.latitude, widget.phoneLocation!.longitude),
-          width: 50,
-          height: 50,
-          child: const Icon(
-            Icons.phone_android,
-            color: Colors.blue,
-            size: 30,
-          ),
+          width: 60,
+          height: 60,
+          child: widget.phoneHeading != null 
+            ? Transform.rotate(
+                angle: (widget.phoneHeading! * 3.14159 / 180), // Convert degrees to radians
+                child: const Icon(
+                  Icons.navigation,  // Arrow icon that points in the direction
+                  color: Colors.blue,
+                  size: 35,
+                ),
+              )
+            : const Icon(
+                Icons.phone_android,
+                color: Colors.blue,
+                size: 30,
+              ),
         ),
       );
     }
@@ -310,6 +321,20 @@ class _SimpleMapWidgetState extends State<SimpleMapWidget> {
                           ),
                         ],
                       ),
+                      if (widget.phoneHeading != null) ...[
+                        const SizedBox(height: 2),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.explore, color: Colors.blue, size: 16),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Heading: ${widget.phoneHeading!.toStringAsFixed(0)}°',
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                          ],
+                        ),
+                      ],
                     ],
                     if (widget.espLocation != null) ...[
                       const SizedBox(height: 4),
