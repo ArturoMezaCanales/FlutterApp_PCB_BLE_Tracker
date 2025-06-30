@@ -19,7 +19,6 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
   String _statusMessage = 'Ready to scan for ESP32 devices';
   StreamSubscription? _scanSubscription;
 
-  // ESP32 specific settings
   static const String TARGET_DEVICE_PREFIX = "ESP32";
 
   @override
@@ -50,7 +49,6 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
   }
 
   Future<void> _startScan() async {
-    // Skip BLE scan on web
     if (kIsWeb) {
       setState(() {
         _statusMessage = 'BLE scanning not available on web. Please use Demo Mode.';
@@ -66,7 +64,7 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
 
     try {
       await FlutterBluePlus.stopScan();
-      
+
       await FlutterBluePlus.startScan(
         timeout: const Duration(seconds: 10),
       );
@@ -74,7 +72,7 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
       _scanSubscription = FlutterBluePlus.scanResults.listen((results) {
         for (var scanResult in results) {
           final deviceName = scanResult.device.platformName;
-          if (deviceName.isNotEmpty && 
+          if (deviceName.isNotEmpty &&
               deviceName.toUpperCase().contains(TARGET_DEVICE_PREFIX) &&
               !_foundDevices.any((d) => d.remoteId == scanResult.device.remoteId)) {
             setState(() {
@@ -84,7 +82,6 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
         }
       });
 
-      // Wait for scan to complete
       await Future.delayed(const Duration(seconds: 10));
       await FlutterBluePlus.stopScan();
 
@@ -96,7 +93,6 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
           _statusMessage = 'Found ${_foundDevices.length} ESP32 device(s)';
         }
       });
-
     } catch (e) {
       setState(() {
         _isScanning = false;
@@ -113,8 +109,7 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
 
     try {
       await device.connect(timeout: const Duration(seconds: 10));
-      
-      // Navigate to home screen with connected device
+
       if (mounted) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
@@ -131,7 +126,6 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
   }
 
   void _skipConnection() {
-    // Enter app without device (demo mode)
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
         builder: (context) => const SimpleHomeScreen(connectedDevice: null),
@@ -142,90 +136,189 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('BLE GPS Tracker'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.bluetooth_searching,
-              size: 80,
-              color: Colors.blue,
-            ),
-            const SizedBox(height: 24),
-            const Text(
-              'Connect to ESP32 Device',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              _statusMessage,
-              style: const TextStyle(fontSize: 16),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 32),
-            
-            // Scan button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: (_isScanning || _isConnecting || kIsWeb) ? null : _startScan,
-                icon: _isScanning 
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.search),
-                label: Text(kIsWeb 
-                  ? 'Web - Use Demo Mode' 
-                  : (_isScanning ? 'Scanning...' : 'Scan for Devices')),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.all(16),
-                ),
-              ),
-            ),
-            
-            const SizedBox(height: 16),
-            
-            // Found devices list
-            if (_foundDevices.isNotEmpty) ...[
-              const Text(
-                'Found Devices:',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              ...(_foundDevices.map((device) => Card(
-                child: ListTile(
-                  leading: const Icon(Icons.device_hub, color: Colors.blue),
-                  title: Text(device.platformName),
-                  subtitle: Text(device.remoteId.toString()),
-                  trailing: _isConnecting 
-                    ? const CircularProgressIndicator()
-                    : const Icon(Icons.arrow_forward_ios),
-                  onTap: _isConnecting ? null : () => _connectToDevice(device),
-                ),
-              ))),
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.blue.shade900,
+              Colors.blue.shade600,
+              Colors.blue.shade300,
             ],
-            
-            const SizedBox(height: 32),
-            
-            // Skip button
-            TextButton(
-              onPressed: _isConnecting ? null : _skipConnection,
-              child: const Text(
-                'Skip - Enter Demo Mode',
-                style: TextStyle(fontSize: 16),
-              ),
+          ),
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              children: [
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      AnimatedScale(
+                        scale: _isScanning ? 1.1 : 1.0,
+                        duration: const Duration(milliseconds: 600),
+                        child: Icon(
+                          Icons.bluetooth_searching,
+                          size: 100,
+                          color: Colors.white.withAlpha(230), // ~90% white
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      Text(
+                        'Connect to ESP32 Device',
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          shadows: [
+                            Shadow(
+                              blurRadius: 10.0,
+                              color: Colors.black.withAlpha(77),
+                              offset: const Offset(2, 2),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+                      ElevatedButton.icon(
+                        onPressed: (_isScanning || _isConnecting || kIsWeb) ? null : _startScan,
+                        icon: _isScanning
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                ),
+                              )
+                            : const Icon(Icons.search),
+                        label: Text(
+                          kIsWeb
+                              ? 'Web - Use Demo Mode'
+                              : (_isScanning ? 'Scanning...' : 'Scan for Devices'),
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue.shade700,
+                          disabledBackgroundColor: Colors.grey.shade500,
+                          foregroundColor: Colors.white,
+                          elevation: 8,
+                          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        _statusMessage,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          color: Colors.white,
+                          fontWeight: FontWeight.w400,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 24),
+                      if (_foundDevices.isNotEmpty) ...[
+                        Text(
+                          'Found Devices:',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white.withAlpha(230),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Expanded(
+                          child: ListView.builder(
+                            itemCount: _foundDevices.length,
+                            itemBuilder: (context, index) {
+                              final device = _foundDevices[index];
+                              return AnimatedOpacity(
+                                opacity: _isConnecting ? 0.6 : 1.0,
+                                duration: const Duration(milliseconds: 300),
+                                child: Card(
+                                  color: Colors.white.withAlpha(25),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  elevation: 0,
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(color: Colors.white.withAlpha(50)),
+                                    ),
+                                    child: ListTile(
+                                      leading: Icon(
+                                        Icons.device_hub,
+                                        color: Colors.blue.shade300,
+                                      ),
+                                      title: Text(
+                                        device.platformName,
+                                        style: TextStyle(
+                                          color: Colors.white.withAlpha(230),
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      subtitle: Text(
+                                        device.remoteId.toString(),
+                                        style: TextStyle(
+                                          color: Colors.white.withAlpha(180),
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                      trailing: _isConnecting
+                                          ? const CircularProgressIndicator(
+                                              valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                                            )
+                                          : Icon(
+                                              Icons.arrow_forward_ios,
+                                              color: Colors.white.withAlpha(180),
+                                              size: 16,
+                                            ),
+                                      onTap: _isConnecting ? null : () => _connectToDevice(device),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+                TextButton(
+                  onPressed: _isConnecting ? null : _skipConnection,
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    backgroundColor: Colors.white.withAlpha(25),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Text(
+                    'Skip - Enter Demo Mode',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.white.withAlpha(230),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

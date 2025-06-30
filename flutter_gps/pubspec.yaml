@@ -51,6 +51,9 @@ dependencies:
   sensors_plus: ^6.1.1
   flutter_compass: ^0.8.0
 
+  # Make it look nice
+  animate_do: ^3.3.4
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
