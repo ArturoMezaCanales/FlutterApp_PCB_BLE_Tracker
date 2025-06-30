@@ -375,181 +375,145 @@ class _SimpleHomeScreenState extends State<SimpleHomeScreen> {
     return directions[index];
   }
 
-  @override
+ @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: const Text('BLE GPS Tracker'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
       ),
-      body: Column(
-        children: [
-          // Map View
-          Expanded(
-            flex: 3,
-            child: SimpleMapWidget(
-              phoneLocation: _phoneLocation,
-              phoneHeading: _compassAvailable ? _heading : null,
-              espLocation: _espData != null 
-                ? Position(
-                    latitude: _espData!.latitude,
-                    longitude: _espData!.longitude,
-                    timestamp: DateTime.now(),
-                    accuracy: 0,
-                    altitude: 0,
-                    heading: 0,
-                    speed: 0,
-                    speedAccuracy: 0,
-                    altitudeAccuracy: 0,
-                    headingAccuracy: 0,
-                  )
-                : null,
-            ),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color.fromARGB(255, 0, 0, 139),
+              Color.fromARGB(255, 30, 144, 255),
+              Color.fromARGB(255, 173, 216, 230),
+            ],
           ),
-          
-          // Single Device Status
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.grey[100],
-              border: Border(
-                top: BorderSide(color: Colors.grey[300]!),
+        ),
+        child: Column(
+          children: [
+            Expanded(
+              flex: 3,
+              child: SimpleMapWidget(
+                phoneLocation: _phoneLocation,
+                phoneHeading: _compassAvailable ? _heading : null,
+                espLocation: _espData != null
+                    ? Position(
+                        latitude: _espData!.latitude,
+                        longitude: _espData!.longitude,
+                        timestamp: DateTime.now(),
+                        accuracy: 0,
+                        altitude: 0,
+                        heading: 0,
+                        speed: 0,
+                        speedAccuracy: 0,
+                        altitudeAccuracy: 0,
+                        headingAccuracy: 0,
+                      )
+                    : null,
               ),
             ),
-            child: Column(
-              children: [
-                // Device status row
-                Row(
-                  children: [
-                    const Icon(Icons.radio, size: 24),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        widget.connectedDevice?.platformName ?? 'No Device',
-                        style: const TextStyle(
-                          fontSize: 18,
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.1),
+                border: Border(
+                  top: BorderSide(color: Colors.white.withOpacity(0.2)),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.radio, color: Colors.white),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          widget.connectedDevice?.platformName ?? 'No Device',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      Icon(
+                        Icons.circle,
+                        color: _connectionStatus == 'Connected'
+                            ? Colors.green
+                            : _connectionStatus == 'Demo Mode'
+                                ? Colors.orange
+                                : Colors.red,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        _connectionStatus,
+                        style: TextStyle(
+                          color: _connectionStatus == 'Connected'
+                              ? Colors.green
+                              : _connectionStatus == 'Demo Mode'
+                                  ? Colors.white
+                                  : Colors.white,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                    ),
-                    Icon(
-                      Icons.circle,
-                      color: _connectionStatus == 'Connected' 
-                        ? Colors.green 
-                        : _connectionStatus == 'Demo Mode'
-                          ? Colors.orange
-                          : Colors.red,
-                      size: 16,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      _connectionStatus,
-                      style: TextStyle(
-                        color: _connectionStatus == 'Connected' 
-                          ? Colors.green 
-                          : _connectionStatus == 'Demo Mode'
-                            ? Colors.orange
-                            : Colors.red,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-                
-                const SizedBox(height: 8),
-                
-                // Signal and last update row
-                Row(
-                  children: [
-                    Text('Signal: $_signalStrength'),
-                    const Spacer(),
-                    Text('Last: $_lastUpdate'),
-                  ],
-                ),
-                
-                const SizedBox(height: 4),
-                
-                // Compass and magnetometer info row
-                if (_compassAvailable) ...[
-                  Row(
-                    children: [
-                      const Icon(Icons.explore, size: 16, color: Colors.green),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Compass: ${_heading.toStringAsFixed(0)}°',
-                        style: const TextStyle(color: Colors.green, fontSize: 12),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        _getCompassDirection(_heading),
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-                      ),
-                      const Spacer(),
                     ],
                   ),
-                  const SizedBox(height: 4),
-                ] else ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'Signal: $_signalStrength    Last: $_lastUpdate',
+                    style: const TextStyle(color: Colors.white70),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _compassAvailable
+                        ? 'Compass: ${_heading.toStringAsFixed(0)}° ${_getCompassDirection(_heading)}'
+                        : 'Compass: Not Available',
+                    style: TextStyle(
+                      color: _compassAvailable ? Colors.white : Colors.orange,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
                   Row(
                     children: [
-                      const Icon(Icons.explore_off, size: 16, color: Colors.orange),
-                      const SizedBox(width: 4),
-                      const Text(
-                        'Compass: Not Available',
-                        style: TextStyle(color: Colors.orange, fontSize: 12),
-                      ),
+                      if (_sendDataTimer?.isActive == true)
+                        const Text(
+                          'Sending location every 2s',
+                          style: TextStyle(color: Colors.green),
+                        )
+                      else if (widget.connectedDevice != null)
+                        const Text(
+                          'Not sending location',
+                          style: TextStyle(color: Colors.orange),
+                        ),
                       const Spacer(),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                ],
-                
-                // Sending status and debug button row
-                Row(
-                  children: [
-                    if (_sendDataTimer?.isActive == true) ...[
-                      const Icon(Icons.upload, size: 16, color: Colors.green),
-                      const SizedBox(width: 4),
-                      const Text(
-                        'Sending location every 2s',
-                        style: TextStyle(color: Colors.green, fontSize: 12),
-                      ),
-                    ] else if (widget.connectedDevice != null) ...[
-                      const Icon(Icons.warning, size: 16, color: Colors.orange),
-                      const SizedBox(width: 4),
-                      const Text(
-                        'Not sending location',
-                        style: TextStyle(color: Colors.orange, fontSize: 12),
-                      ),
-                    ],
-                    const Spacer(),
-                    if (widget.connectedDevice != null && _sendCharacteristic != null) ...[
                       ElevatedButton.icon(
-                        onPressed: _sendLocationToESP32,
-                        icon: const Icon(Icons.send, size: 16),
-                        label: const Text('Send Now'),
+                        onPressed: _openDebugScreen,
+                        icon: const Icon(Icons.bug_report, size: 16),
+                        label: const Text('Debug'),
                         style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                          textStyle: const TextStyle(fontSize: 10),
+                          backgroundColor: Colors.white.withOpacity(0.2),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          textStyle: const TextStyle(fontSize: 12),
                         ),
                       ),
-                      const SizedBox(width: 8),
                     ],
-                    ElevatedButton.icon(
-                      onPressed: _openDebugScreen,
-                      icon: const Icon(Icons.bug_report, size: 16),
-                      label: const Text('Debug'),
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        textStyle: const TextStyle(fontSize: 12),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
+                  ),
+                ],
+              ),
+            )
+          ],
+        ),
       ),
     );
   }
