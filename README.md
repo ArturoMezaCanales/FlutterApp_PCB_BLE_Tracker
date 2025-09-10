@@ -17,5 +17,16 @@ A prototype Flutter application designed to work with a custom-built tracking de
 - GPS-based location display in the app  
 - Background monitoring of location and connection  
 - Notifications to help prevent loss when moving away
-- Map view displaying the tracker’s location and the user’s device position 
+- Map view displaying the tracker’s location and the user’s device position
+
+  
+### Demo
+[Watch the Demo on YouTube](https://www.youtube.com/shorts/hxWV5kCJoWA)
+
+
+### Connection Screen  
+![Map View](./media/image1.jpg)  
+
+### Map View  
+![Notification Alert](./media/image2.jpg)  
 
